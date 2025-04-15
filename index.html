@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Quality Prediction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* Full width layout styles */
+        body {
+            background-color: #eef5ff;
+        }
+        
+        .page-container {
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .main-content {
+            display: flex;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .input-section {
+            flex: 1;
+            min-width: 400px;
+        }
+        
+        .result-section-container {
+            flex: 1;
+            min-width: 400px;
+        }
+        
+        .card {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 0;
+            height: 100%;
+        }
+        
+        .card-header {
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+        }
+        
+        .card-header.alert-potable {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+        }
+        
+        .card-header.alert-non-potable {
+            background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%);
+        }
+        
+        .card-body {
+            padding: 25px;
+            background-color: white;
+        }
+        
+        .form-control {
+            padding: 12px 15px;
+            height: auto;
+            border-radius: 8px;
+        }
+        
+        .btn-primary {
+            padding: 12px 25px;
+            font-weight: 600;
+            border-radius: 8px;
+            margin-top: 15px;
+            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .param-slider {
+            height: 6px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            margin: 10px 0;
+            position: relative;
+        }
+        
+        .param-value {
+            height: 100%;
+            background: linear-gradient(to right, #4b6cb7, #182848);
+            border-radius: 3px;
+            width: 50%;
+        }
+        
+        .param-range {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+        
+        .result-title {
+            display: flex;
+            align-items: center;
+        }
+        
+        .result-title i {
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+        
+        .result-title h4 {
+            margin: 0;
+        }
+        
+        .result-detail {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .result-detail h5 {
+            display: flex;
+            align-items: center;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+        
+        .result-detail i {
+            margin-right: 10px;
+            color: #4b6cb7;
+        }
+        
+        .result-detail ul {
+            padding-left: 20px;
+        }
+        
+        .result-detail li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        .result-placeholder {
+            display: flex;
+            height: 100%;
+            min-height: 300px;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-style: italic;
+            border: 1px dashed #dee2e6;
+            border-radius: 12px;
+            padding: 2rem;
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .graph-container {
+            margin-top: 40px;
+            padding: 25px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .graph-title {
+            margin-bottom: 20px;
+            color: #495057;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .input-section, 
+            .result-section-container {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <div class="header animate__animated animate__fadeIn text-center">
+            <h1 class="display-4 text-primary fw-bold">Water Quality Prediction</h1>
+            <p class="lead mb-4">Enter your water parameters to check if your water is safe to drink</p>
+        </div>
+
+        <div class="main-content animate__animated animate__fadeInUp">
+            <!-- Input Section (Left Side) -->
+            <div class="input-section">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-vial me-2"></i> Test Your Water
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="/" id="waterForm">
+                            <div class="form-group mb-4">
+                                <label for="ph" class="form-label fw-bold">pH Level</label>
+                                <input type="number" step="0.1" class="form-control" name="ph" id="ph" value="{{ form_data.ph }}" required>
+                                <div class="param-slider mt-2">
+                                    <div class="param-value" id="ph-slider"></div>
+                                </div>
+                                <div class="param-range">
+                                    <span>0 (Acidic)</span>
+                                    <span>7 (Neutral)</span>
+                                    <span>14 (Alkaline)</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-4">
+                                <label for="solids" class="form-label fw-bold">Total Dissolved Solids (ppm)</label>
+                                <input type="number" step="0.1" class="form-control" name="solids" id="solids" value="{{ form_data.solids }}" required>
+                                <div class="param-slider mt-2">
+                                    <div class="param-value" id="solids-slider"></div>
+                                </div>
+                                <div class="param-range">
+                                    <span>0</span>
+                                    <span>1000</span>
+                                    <span>2000+</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-4">
+                                <label for="chloramines" class="form-label fw-bold">Chloramines (ppm)</label>
+                                <input type="number" step="0.1" class="form-control" name="chloramines" id="chloramines" value="{{ form_data.chloramines }}" required>
+                                <div class="param-slider mt-2">
+                                    <div class="param-value" id="chloramines-slider"></div>
+                                </div>
+                                <div class="param-range">
+                                    <span>0</span>
+                                    <span>4</span>
+                                    <span>8+</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-4">
+                                <label for="sulfate" class="form-label fw-bold">Sulfate (mg/L)</label>
+                                <input type="number" step="0.1" class="form-control" name="sulfate" id="sulfate" value="{{ form_data.sulfate }}" required>
+                                <div class="param-slider mt-2">
+                                    <div class="param-value" id="sulfate-slider"></div>
+                                </div>
+                                <div class="param-range">
+                                    <span>0</span>
+                                    <span>250</span>
+                                    <span>500+</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-4">
+                                <label for="turbidity" class="form-label fw-bold">Turbidity (NTU)</label>
+                                <input type="number" step="0.1" class="form-control" name="turbidity" id="turbidity" value="{{ form_data.turbidity }}" required>
+                                <div class="param-slider mt-2">
+                                    <div class="param-value" id="turbidity-slider"></div>
+                                </div>
+                                <div class="param-range">
+                                    <span>0</span>
+                                    <span>5</span>
+                                    <span>10+</span>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-3">
+                                <i class="fas fa-water me-2"></i> Predict Water Quality
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section (Right Side) -->
+            <div class="result-section-container">
+                {% if prediction %}
+                <div class="card animate__animated animate__fadeIn">
+                    <div class="card-header alert-{{ 'potable' if prediction == 'Potable' else 'non-potable' }}">
+                        <div class="result-title">
+                            <i class="fas {{ 'fa-check-circle' if prediction == 'Potable' else 'fa-exclamation-triangle' }}"></i>
+                            <h4>Water is {{ prediction }}</h4>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="lead">{{ 'This water is safe for consumption.' if prediction == 'Potable' else 'This water is not safe for consumption based on the parameters provided.' }}</p>
+                        
+                        {% if reasons %}
+                        <div class="result-detail animate__animated animate__fadeIn">
+                            <h5><i class="fas fa-clipboard-list"></i> Reasons for Non-Potable Status:</h5>
+                            <ul>
+                                {% for reason in reasons %}
+                                <li>{{ reason }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        
+                        {% if suggestions %}
+                        <div class="result-detail animate__animated animate__fadeIn" style="animation-delay: 0.2s">
+                            <h5><i class="fas fa-lightbulb"></i> Recommendations to Make It Potable:</h5>
+                            <ul>
+                                {% for suggestion in suggestions %}
+                                <li>{{ suggestion }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="result-placeholder">
+                    <div class="text-center">
+                        <i class="fas fa-arrow-left fa-3x mb-4 text-primary opacity-50"></i>
+                        <p class="fs-5">Enter your water parameters and click "Predict Water Quality" to see results here</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if graph_json %}
+        <div class="graph-container animate__animated animate__fadeInUp" style="animation-delay: 0.3s">
+            <h3 class="graph-title"><i class="fas fa-chart-line me-2"></i>Water Quality Insights</h3>
+            <div id="graphs"></div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    
+    <script>
+        // Update sliders based on input values
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = {
+                'ph': { min: 0, max: 14, element: document.getElementById('ph') },
+                'solids': { min: 0, max: 2000, element: document.getElementById('solids') },
+                'chloramines': { min: 0, max: 8, element: document.getElementById('chloramines') },
+                'sulfate': { min: 0, max: 500, element: document.getElementById('sulfate') },
+                'turbidity': { min: 0, max: 10, element: document.getElementById('turbidity') }
+            };
+            
+            for (const [id, config] of Object.entries(inputs)) {
+                const input = config.element;
+                const slider = document.getElementById(`${id}-slider`);
+                
+                if (input && slider) {
+                    // Initialize slider
+                    updateSlider(input.value, slider, config.min, config.max);
+                    
+                    // Update slider when input changes
+                    input.addEventListener('input', function() {
+                        updateSlider(this.value, slider, config.min, config.max);
+                    });
+                }
+            }
+            
+            function updateSlider(value, sliderElement, min, max) {
+                const percent = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+                sliderElement.style.width = `${percent}%`;
+            }
+        });
+    </script>
+</body>
+</html>
